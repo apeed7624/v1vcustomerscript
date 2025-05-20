@@ -11,7 +11,7 @@ from utils.download_task import TaskDownloader
 
 def main():
     while True:  # 使用迴圈確保執行完畢後回到主選單
-        print("\n🚀 Trend Micro Vision One API Tool 🚀")
+        print("\nTrend Micro Vision One Customer Script Tool")
         print("1. 列出 Custom Scripts")
         print("2. 列出所有 Clients（包含 EDR Sensor 狀態）")
         print("3. 執行單一 Custom Script")
@@ -29,13 +29,13 @@ def main():
             manager = CustomScriptManager()
             scripts = manager.list_custom_scripts()
             if scripts:
-                print("✅ 取得 Custom Scripts：")
+                print(" 取得 Custom Scripts：")
                 for script in scripts:
                     file_name = script.get('fileName', '未命名')
                     script_id = script.get('id', '未知 ID')
                     print(f"- {file_name} (ID: {script_id})")
             else:
-                print("❌ 沒有找到 Custom Scripts")
+                print(" 沒有找到 Custom Scripts")
 
         elif choice == "2":
             manager = ClientManager()
@@ -56,9 +56,9 @@ def main():
                 if export_choice == "y":
                     manager.export_to_csv(agents)
                 else:
-                    print("🚀 匯出取消，回到主選單。")
+                    print(" 匯出取消，回到主選單。")
             else:
-                print("❌ 沒有找到任何 Client")
+                print(" 沒有找到任何 Client")
 
         elif choice == "3":
             manager = RunCustomScriptManager()
@@ -69,9 +69,9 @@ def main():
             response = manager.run_custom_script(agent_guid, file_name, parameters)
 
             if response:
-                print("✅ 成功執行 Custom Script!")
+                print(" 成功執行 Custom Script!")
             else:
-                print("❌ 執行失敗")
+                print(" 執行失敗")
 
         elif choice == "4":
             manager = CustomScriptManager()
@@ -83,9 +83,9 @@ def main():
             response = manager.update_script(file_path, file_name, file_type, description)
 
             if response:
-                print("✅ 更新成功！")
+                print(" 更新成功！")
             else:
-                print("❌ 更新失敗")
+                print("更新失敗")
 
         elif choice == "5":
             manager = RunCustomScriptManager()
@@ -118,7 +118,7 @@ def main():
             # ✅ 確保 task_file 存在
 
             if not os.path.isfile(task_file):
-                print(f"❌ 檔案 '{task_file}' 不存在，請確認路徑")
+                print(f" 檔案 '{task_file}' 不存在，請確認路徑")
 
                 continue
 
@@ -128,10 +128,10 @@ def main():
 
             subprocess.Popen(["python", script_path, task_file], creationflags=subprocess.CREATE_NEW_CONSOLE)
 
-            print("🚀 新視窗已開啟，正在監控 Task 狀態，請勿關閉該視窗！")
+            print(" 新視窗已開啟，正在監控 Task 狀態，請勿關閉該視窗！")
 
         elif choice == "9":
-            print("👋 再見！已退出程式。")
+            print(" 再見！已退出程式。")
             break  # 離開迴圈，結束程式
 
 
@@ -139,7 +139,7 @@ def main():
 
 
         else:
-            print("❌ 無效的選擇，請重新輸入！")
+            print("無效的選擇，請重新輸入！")
 
 if __name__ == "__main__":
     main()
