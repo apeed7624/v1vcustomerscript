@@ -1,6 +1,7 @@
 import os
 import time
 import sys
+import platform
 from utils.api_client import APIClient
 
 
@@ -8,7 +9,7 @@ class TaskStatusChecker:
     def __init__(self):
         self.api_client = APIClient()
         self.url_template = "/v3.0/response/tasks/{task_id}"
-        self.check_interval = 30  # ✅ 每 30 秒檢查一次 (可調整)
+        self.check_interval = 90  # ✅ 每 30 秒檢查一次 (可調整)
 
     def get_task_status(self, task_id):
         """查詢 Task ID 狀態"""
@@ -49,12 +50,8 @@ class TaskStatusChecker:
                 print("✅ 所有 Task 已完成！")
                 break
 
-            print(f"⏳ 仍有 {len(pending_tasks)} 個 Task 未完成，30 秒後重新檢查...")
+            print(f"⏳ 仍有 {len(pending_tasks)} 個 Task 未完成，90 秒後重新檢查...")
             time.sleep(self.check_interval)  # ✅ 等待 30 秒再檢查
-
-        # ✅ 在所有 Task 完成後，停留在視窗
-        input("\n🎯 所有 Task 已完成！按 Enter 退出...")  # ❌ 這行讓視窗保持開啟
-
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
@@ -64,3 +61,12 @@ if __name__ == "__main__":
 
     manager = TaskStatusChecker()
     manager.check_all_tasks(task_file)
+
+    # ✅ 在所有 Task 完成後，根據系統顯示保留提示
+    system = platform.system().lower()
+    if system == "windows":
+        os.system("pause")  # Windows 使用 pause
+    elif system == "darwin":
+        os.system('osascript -e \'tell app "Terminal" to display dialog "✅ 所有 Task 已完成！請關閉視窗" buttons {"OK"}\'')
+    else:
+        input("\n🎯 所有 Task 已完成！按 Enter 退出...")  # Linux 或其他系統使用 input

@@ -5,6 +5,8 @@ import subprocess  # 使用 7z.exe 來解壓縮
 import csv
 import datetime
 import zipfile  # 用於 zip 解壓縮
+import platform
+import shutil
 from utils.api_client import APIClient
 
 
@@ -22,7 +24,10 @@ class TaskDownloader:
         os.makedirs(self.assessment_dir, exist_ok=True)
 
         # 7z 解壓縮工具
-        self.seven_zip_path = r"C:\Program Files\7-Zip\7z.exe"  # 確保 7-Zip 已安裝
+        if platform.system() == "Windows":
+            self.seven_zip_cmd = [r"C:\Program Files\7-Zip\7z.exe"]
+        else:
+            self.seven_zip_cmd = ["7z"]
 
     def get_task_info(self, task_id):
         """
@@ -87,11 +92,11 @@ class TaskDownloader:
         os.makedirs(extract_to, exist_ok=True)
 
         try:
-            if not os.path.exists(self.seven_zip_path):
-                print("❌ 7-Zip 未安裝，請確認 `self.seven_zip_path` 設定")
+            if shutil.which(self.seven_zip_cmd[0]) is None and not os.path.exists(self.seven_zip_cmd[0]):
+                print("❌ 找不到 7-Zip 解壓工具，請確認已安裝 7-Zip 或設定 PATH")
                 return []
 
-            command = [self.seven_zip_path, "x", archive_path, f"-p{password}", f"-o{extract_to}", "-y"]
+            command = self.seven_zip_cmd + ["x", archive_path, f"-p{password}", f"-o{extract_to}", "-y"]
             result = subprocess.run(command, capture_output=True, text=True)
 
             if result.returncode == 0:

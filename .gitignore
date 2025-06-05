@@ -22,3 +22,4 @@ build/
 # Sensitive config
 config.py
 client_export_data/
+run_script_result/

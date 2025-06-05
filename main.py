@@ -112,21 +112,27 @@ def main():
             manager.process_from_file(task_file)
 
         elif choice == "8":
+            import platform
 
             task_file = input("請輸入包含 Task ID 的 txt 檔案路徑: ").strip()
 
             # ✅ 確保 task_file 存在
 
-            if not os.path.isfile(task_file):
-                print(f" 檔案 '{task_file}' 不存在，請確認路徑")
 
-                continue
-
-            # ✅ 啟動新視窗，運行 `check_task_status.py`
-
-            script_path = os.path.join(os.getcwd(), "check_task_status.py")
-
-            subprocess.Popen(["python", script_path, task_file], creationflags=subprocess.CREATE_NEW_CONSOLE)
+            script_module = "utils.check_task_status"
+            system = platform.system().lower()
+            if system == "windows":
+                script_path = os.path.join(os.getcwd(), "utils", "check_task_status.py")
+                subprocess.Popen(["python", script_path, task_file], creationflags=subprocess.CREATE_NEW_CONSOLE)
+            elif system == "darwin":
+                # macOS 用 AppleScript 開新 Terminal 執行 - 使用 -m module 方式
+                cwd = os.getcwd()
+                task_file = os.path.abspath(task_file)
+                osascript_cmd = f'tell application "Terminal" to do script "cd \\"{cwd}\\"; python3 -m {script_module} \\"{task_file}\\""'
+                subprocess.Popen(["osascript", "-e", osascript_cmd])
+            else:
+                # 其他系統直接執行 - 使用 -m module 方式
+                subprocess.Popen(["python3", "-m", script_module, task_file])
 
             print(" 新視窗已開啟，正在監控 Task 狀態，請勿關閉該視窗！")
 
