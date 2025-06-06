@@ -288,7 +288,7 @@ elif option == "關於本工具":
     with st.expander("🔧 關於本工具", expanded=True):
         st.markdown("""
         **Trend Micro Vision One 工具整合面板**  
-        版本：v1.0.0  
+        版本：v1.1.0  
         作者：Josh Huang  
         本工具整合常用腳本管理、批次執行、任務狀態監控與檔案下載功能。  
         若有任何問題或建議，請聯絡內部資訊安全團隊。
