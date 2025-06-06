@@ -25,6 +25,7 @@ class RunCustomScriptManager:
         }]
 
         result = self.api_client.send_request("POST", endpoint, data=payload)
+        print("🔥 result 回傳:", result)
 
         if result is None:
             print(f"❌ 無法執行 Custom Script（Agent: {agent_guid}），請檢查 API 權限")
