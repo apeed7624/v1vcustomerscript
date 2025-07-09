@@ -9,7 +9,7 @@ class APIClient:
             "Authorization": f"Bearer {API_KEY}"
         }
 
-    def send_request(self, method, endpoint, params=None, data=None, files=None):
+    def send_request(self, method, endpoint, params=None, data=None, files=None, extra_headers=None):
         """
         統一發送 API 請求
         :param method: "GET", "POST", "PUT", "DELETE"
@@ -17,17 +17,38 @@ class APIClient:
         :param params: 查詢參數 (GET 用, 例如 {'filter': 'YOUR_FILTER'})
         :param data: `POST/PUT` 傳送的 JSON 資料
         :param files: `POST/PUT` 需要上傳的檔案 (multipart/form-data)
+        :param extra_headers: 額外的 HTTP 標頭字典
         :return: JSON 回應，若 API 無回應則回傳 None
         """
         url = f"{self.base_url}{endpoint}"
 
         try:
+            import json
+            print("📤 發送 API 請求:")
+            print(f"🔹 Method: {method}")
+            print(f"🔹 URL: {url}")
+            headers = self.headers.copy()
+            if extra_headers:
+                headers.update(extra_headers)
+            print(f"🔹 Headers: {headers}")
+            print("📤 送出 Request Headers:")
+            for k, v in headers.items():
+                print(f"🔹 {k}: {v}")
+            if params:
+                print(f"🔹 Params: {params}")
             if files:
-                response = requests.request(method, url, headers=self.headers, params=params, data=data, files=files)
+                print("🚀 即將送出的 Request Payload (form-data):")
+                print(data)
+                response = requests.request(method, url, headers=headers, params=params, data=data, files=files)
             else:
-                self.headers["Content-Type"] = "application/json"
-                response = requests.request(method, url, headers=self.headers, params=params, json=data)
+                headers["Content-Type"] = "application/json"
+                print("🚀 即將送出的 Request Payload:")
+                print(json.dumps(data, indent=2, ensure_ascii=False))
+                response = requests.request(method, url, headers=headers, params=params, json=data)
 
+            print("📥 回應 Headers:")
+            for k, v in response.headers.items():
+                print(f"🔸 {k}: {v}")
             if response.status_code in [200, 201, 202]:
                 return response.json() if response.text else True  # 若無回應內容，視為成功
 

@@ -7,6 +7,8 @@ from utils.agentlist import ClientManager
 from utils.run_custom_script import RunCustomScriptManager
 from utils.collect_file import CollectFileManager
 from utils.download_task import TaskDownloader
+from utils.yara_rule_list import YaraRuleManager
+from utils.yara_rule_run import YaraScanManager
 from streamlit_option_menu import option_menu
 
 st.set_page_config(page_title="Vision One 工具", layout="wide")
@@ -17,10 +19,12 @@ with st.sidebar:
         menu_title="功能選單",
         options=[
             "列出 Custom Scripts",
+            "列出所有 YARA Rules",
             "列出所有 Clients（包含 EDR Sensor 狀態）",
             "執行單一 Custom Script",
             "更新 Custom Script",
             "批次執行 Custom Script",
+            "執行 YARA 掃描",
             "批次收集檔案",
             "下載並解壓縮檔案",
             "檢查 Task ID 狀態",
@@ -28,8 +32,10 @@ with st.sidebar:
             "關於本工具"
         ],
         icons=[
-            "file-earmark-code", "people", "play", "upload",
-            "layers", "cloud-arrow-down", "archive", "search", "list-check", "info-circle"
+            "file-earmark-code",
+            "shield-check",
+            "people", "play", "upload",
+            "layers", "bug", "cloud-arrow-down", "archive", "search", "list-check", "info-circle"
         ],
         menu_icon="tools",
         default_index=0
@@ -37,15 +43,36 @@ with st.sidebar:
 
 if option == "列出 Custom Scripts":
     with st.expander("1. 列出 Custom Scripts", expanded=True):
-        if st.button("執行功能"):
-            st.subheader("Custom Script 清單")
-            manager = CustomScriptManager()
-            scripts = manager.list_custom_scripts()
-            if scripts:
-                for script in scripts:
-                    st.write(f"{script.get('fileName', '未命名')} (ID: {script.get('id', '未知 ID')})")
-            else:
-                st.warning("沒有找到 Custom Scripts")
+        st.subheader("Custom Script 清單")
+        manager = CustomScriptManager()
+        scripts = manager.list_custom_scripts()
+        if scripts:
+            import pandas as pd
+            table_data = []
+            for script in scripts:
+                table_data.append({
+                    "檔案名稱": script.get("fileName", "未命名"),
+                    "ID": script.get("id", "未知 ID"),
+                    "描述": script.get("description", ""),
+                    "更新者": script.get("updatedBy", ""),
+                    "更新時間": script.get("updatedDateTime", "")
+                })
+            df = pd.DataFrame(table_data)
+            st.dataframe(df)
+        else:
+            st.warning("沒有找到 Custom Scripts")
+
+elif option == "列出所有 YARA Rules":
+    with st.expander("列出所有 YARA 規則", expanded=True):
+        st.subheader("YARA 規則清單")
+        manager = YaraRuleManager()
+        rules = manager.list_yara_rules()
+        if rules:
+            import pandas as pd
+            df = pd.DataFrame(rules)
+            st.table(df)
+        else:
+            st.warning("❌ 無法取得任何 YARA 規則，請確認 API 設定")
 
 elif option == "列出所有 Clients（包含 EDR Sensor 狀態）":
     with st.expander("2. 列出所有 Clients（包含 EDR Sensor 狀態）", expanded=True):
@@ -58,8 +85,18 @@ elif option == "列出所有 Clients（包含 EDR Sensor 狀態）":
             agents = manager.list_all_clients()
             st.session_state.agents_data = agents
             if agents:
+                table_data = []
                 for agent in agents:
-                    st.write(f"{agent.get('endpointName', '未知')} (Agent GUID: {agent.get('agentGuid', '')}, IP: {agent.get('lastUsedIp', '')}, OS: {agent.get('osName', '')}, Status: {agent.get('edrSensor', {}).get('connectivity', 'Disconnected')})")
+                    table_data.append({
+                        "Endpoint Name": agent.get("endpointName", "未知"),
+                        "Agent GUID": agent.get("agentGuid", ""),
+                        "IP": agent.get("lastUsedIp", ""),
+                        "OS": agent.get("osName", ""),
+                        "EDR Sensor": agent.get("edrSensor", {}).get("connectivity", "Disconnected")
+                    })
+                import pandas as pd
+                df = pd.DataFrame(table_data)
+                st.dataframe(df)
             else:
                 st.warning("❌ 沒有找到任何 Client")
 
@@ -129,6 +166,52 @@ elif option == "批次執行 Custom Script":
                     st.success(f"Task IDs 已成功匯出至 {taskid_path}")
             else:
                 st.warning("請上傳 txt 並輸入 Script 名稱")
+
+elif option == "執行 YARA 掃描":
+    with st.expander("執行 YARA 規則掃描", expanded=True):
+        st.subheader("執行 YARA 掃描（自訂規則）")
+        agent_guid_list = st.text_area("輸入多個 Agent GUID（每行一個）").splitlines()
+        target_file_location = st.text_input("目標檔案路徑（例如 C:\\test.txt）")
+        manager_rule = YaraRuleManager()
+        rules = manager_rule.list_yara_rules()
+        yara_rule_names = [r.get("檔案名稱", "未知") for r in rules] if rules else []
+        yara_content = st.selectbox("選擇 YARA 規則名稱", yara_rule_names)
+        description = st.text_input("任務描述", value="Run YARA Rule")
+        target_file_size = st.selectbox("掃描檔案大小上限", ["1M", "2M", "3M", "4M"], index=0)
+        target_file_option = st.selectbox("掃描範圍", ["SCAN_ALL", "SCAN_TOP"], index=0)
+
+        if st.button("執行 YARA 掃描"):
+            if not agent_guid_list:
+                st.warning("❌ 請輸入至少一個 Agent GUID")
+            elif agent_guid_list and target_file_location and yara_content:
+                st.write("🚀 即將送出 YARA Scan Request：")
+                base_payload = {
+                    "target": "File",
+                    "targetFileLocation": target_file_location,
+                    "targetFileSize": target_file_size,
+                    "targetFileOption": target_file_option,
+                    "yaraRuleFileName": yara_content,
+                    "description": description
+                }
+                st.write("🚀 原始 Payload（每台 Agent 會個別送出）:", base_payload)
+
+                manager = YaraScanManager()
+                full_payload = {
+                    **base_payload,
+                    "agentGuids": agent_guid_list
+                }
+                st.write("🚀 即將送出 YARA Scan Request：", full_payload)
+                import json
+                print("🪵 DEBUG - 即將送出的完整 Payload：")
+                print(json.dumps(full_payload, indent=2, ensure_ascii=False))
+                result = manager.run_yara_scan(full_payload)
+                if result:
+                    st.success("✅ YARA 任務送出成功")
+                    st.json(result)
+                else:
+                    st.error("❌ 任務發送失敗")
+            else:
+                st.warning("請填寫所有欄位")
 
 elif option == "批次收集檔案":
     with st.expander("6. 批次收集檔案", expanded=True):
@@ -291,5 +374,6 @@ elif option == "關於本工具":
         版本：v1.1.0  
         作者：Josh Huang  
         本工具整合常用腳本管理、批次執行、任務狀態監控與檔案下載功能。  
-        若有任何問題或建議，請聯絡內部資訊安全團隊。
+        若有任何問題或建
+        議，請聯絡內部資訊安全團隊。
         """)
