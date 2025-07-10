@@ -111,7 +111,10 @@ elif option == "執行單一 Custom Script":
     with st.expander("3. 執行單一 Custom Script", expanded=True):
         st.subheader("執行 Custom Script")
         agent_guid = st.text_input("Agent GUID")
-        file_name = st.text_input("Script 檔名")
+        script_manager = CustomScriptManager()
+        scripts = script_manager.list_custom_scripts()
+        script_names = [s.get("fileName", "未知 Script") for s in scripts] if scripts else []
+        file_name = st.selectbox("Script 檔案名稱", script_names)
         parameters = st.text_input("腳本參數（powershell or bash）", "")
         if st.button("執行"):
             if agent_guid and file_name:
@@ -147,7 +150,10 @@ elif option == "批次執行 Custom Script":
     with st.expander("5. 批次執行 Custom Script", expanded=True):
         st.subheader("批次執行 Custom Script")
         file = st.file_uploader("上傳包含 Agent GUID 的 txt 檔案", type="txt")
-        script_name = st.text_input("Script 檔案名稱")
+        script_manager = CustomScriptManager()
+        scripts = script_manager.list_custom_scripts()
+        script_names = [s.get("fileName", "未知 Script") for s in scripts] if scripts else []
+        script_name = st.selectbox("Script 檔案名稱", script_names)
         params = st.text_input("腳本參數（powershell or bash）", "")
         if st.button("執行批次"):
             if file and script_name:
@@ -371,7 +377,7 @@ elif option == "關於本工具":
     with st.expander("🔧 關於本工具", expanded=True):
         st.markdown("""
         **Trend Micro Vision One 工具整合面板**  
-        版本：v1.1.0  
+        版本：v1.1.2  
         作者：Josh Huang  
         本工具整合常用腳本管理、批次執行、任務狀態監控與檔案下載功能。  
         若有任何問題或建
