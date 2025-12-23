@@ -1,0 +1,15 @@
+{
+    "active_tenant": "Default",
+    "tenants": {
+        "Default": {
+            "api_key": "YOUR_API_KEY_HERE",
+            "base_url": "https://api.sg.xdr.trendmicro.com",
+            "note": "預設環境"
+        },
+        "Customer_Demo": {
+            "api_key": "ANOTHER_API_KEY",
+            "base_url": "https://api.us.xdr.trendmicro.com",
+            "note": "範例客戶環境"
+        }
+    }
+}
