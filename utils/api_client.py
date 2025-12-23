@@ -1,13 +1,19 @@
 import requests
-from utils.config import API_KEY, BASE_URL
+from utils.config_manager import ConfigManager
 
 class APIClient:
     def __init__(self):
         """初始化 API 連線"""
-        self.base_url = BASE_URL
-        self.headers = {
-            "Authorization": f"Bearer {API_KEY}"
-        }
+        self.config_manager = ConfigManager()
+        self.api_key, self.base_url = self.config_manager.get_active_config()
+        
+        if not self.api_key or not self.base_url:
+            print("⚠️ 警告: 未設定 API Key 或 Base URL，請至設定頁面設定")
+            self.headers = {}
+        else:
+            self.headers = {
+                "Authorization": f"Bearer {self.api_key}"
+            }
 
     def send_request(self, method, endpoint, params=None, data=None, files=None, extra_headers=None):
         """

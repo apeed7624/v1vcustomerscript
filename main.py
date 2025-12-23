@@ -9,12 +9,20 @@ from utils.collect_file import CollectFileManager
 from utils.download_task import TaskDownloader
 from utils.yara_rule_list import YaraRuleManager
 from utils.yara_rule_run import YaraScanManager
+from utils.config_manager import ConfigManager
 from streamlit_option_menu import option_menu
 
 st.set_page_config(page_title="Vision One 工具", layout="wide")
 st.title("Trend Micro Vision One 工具")
 
+# 初始化 ConfigManager
+config_manager = ConfigManager()
+active_tenant = config_manager.get_active_tenant_name()
+
 with st.sidebar:
+    # 顯示當前 Tenant 資訊
+    st.info(f"🏢 目前環境: **{active_tenant if active_tenant else '未設定'}**")
+    
     option = option_menu(
         menu_title="功能選單",
         options=[
@@ -29,13 +37,14 @@ with st.sidebar:
             "下載並解壓縮檔案",
             "檢查 Task ID 狀態",
             "持續監控所有 Task 狀態（Web 介面）",
+            "⚙️ 設定與 Tenant 切換",
             "關於本工具"
         ],
         icons=[
             "file-earmark-code",
             "shield-check",
             "people", "play", "upload",
-            "layers", "bug", "cloud-arrow-down", "archive", "search", "list-check", "info-circle"
+            "layers", "bug", "cloud-arrow-down", "archive", "search", "list-check", "gear", "info-circle"
         ],
         menu_icon="tools",
         default_index=0
@@ -373,13 +382,89 @@ elif option == "持續監控所有 Task 狀態（Web 介面）":
     else:
         st.warning("❌ 無法取得任務列表或目前尚無任務")
 
+elif option == "⚙️ 設定與 Tenant 切換":
+    st.header("⚙️ 設定與 Tenant 管理")
+    
+    # 1. 切換 Tenant
+    st.subheader("🔄 切換環境")
+    tenants = config_manager.get_all_tenants()
+    tenant_names = list(tenants.keys())
+    
+    if not tenant_names:
+        st.warning("目前沒有任何 Tenant 設定，請先新增。")
+    else:
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            selected_tenant = st.selectbox(
+                "選擇要切換的 Tenant",
+                tenant_names,
+                index=tenant_names.index(active_tenant) if active_tenant in tenant_names else 0
+            )
+        with col2:
+            st.write("") # Spacer
+            st.write("") # Spacer
+            if st.button("切換", key="switch_btn"):
+                if config_manager.set_active_tenant(selected_tenant):
+                    st.success(f"已切換至 {selected_tenant}")
+                    st.rerun()
+                else:
+                    st.error("切換失敗")
+
+        # 顯示當前 Tenant 詳細資訊
+        if selected_tenant:
+            curr_info = tenants[selected_tenant]
+            st.info(f"""
+            **Tenant 名稱**: {selected_tenant}
+            **Base URL**: {curr_info.get('base_url')}
+            **備註**: {curr_info.get('note')}
+            """)
+
+    st.divider()
+
+    # 2. 新增/編輯 Tenant
+    st.subheader("➕ 新增 / 編輯 Tenant")
+    with st.form("tenant_form"):
+        new_name = st.text_input("Tenant 名稱 (唯一識別碼)", placeholder="例如: Customer_A")
+        new_api_key = st.text_input("API Key", type="password", placeholder="eyJ...")
+        new_base_url = st.text_input("Base URL", value="https://api.sg.xdr.trendmicro.com")
+        new_note = st.text_input("備註", placeholder="例如: 正式環境")
+        
+        submitted = st.form_submit_button("儲存設定")
+        if submitted:
+            if new_name and new_api_key and new_base_url:
+                config_manager.add_tenant(new_name, new_api_key, new_base_url, new_note)
+                st.success(f"Tenant '{new_name}' 已儲存！")
+                st.rerun()
+            else:
+                st.error("請填寫名稱、API Key 與 Base URL")
+
+    st.divider()
+
+    # 3. 刪除 Tenant
+    st.subheader("🗑️ 刪除 Tenant")
+    del_col1, del_col2 = st.columns([3, 1])
+    with del_col1:
+        del_name = st.selectbox("選擇要刪除的 Tenant", tenant_names, key="del_select")
+    with del_col2:
+        st.write("")
+        st.write("")
+        if st.button("刪除", type="primary"):
+            if len(tenant_names) <= 1:
+                st.error("無法刪除最後一個 Tenant")
+            else:
+                if config_manager.delete_tenant(del_name):
+                    st.success(f"已刪除 {del_name}")
+                    st.rerun()
+                else:
+                    st.error("刪除失敗")
+
 elif option == "關於本工具":
     with st.expander("🔧 關於本工具", expanded=True):
         st.markdown("""
-        **Trend Micro Vision One 工具整合面板**  
-        版本：v1.1.2  
-        作者：Josh Huang  
-        本工具整合常用腳本管理、批次執行、任務狀態監控與檔案下載功能。  
+        **Trend Micro Vision One 工具整合面板**
+        版本：v1.2.0 (Multi-Tenant Support)
+        作者：Josh Huang
+        本工具整合常用腳本管理、批次執行、任務狀態監控與檔案下載功能。
         若有任何問題或建
         議，請聯絡內部資訊安全團隊。
         """)

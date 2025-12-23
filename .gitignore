@@ -21,5 +21,6 @@ build/
 
 # Sensitive config
 config.py
+tenants.json
 client_export_data/
 run_script_result/
